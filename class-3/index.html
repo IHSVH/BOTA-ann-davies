@@ -72,7 +72,9 @@
   #seek::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;
     background:var(--accent);cursor:pointer;box-shadow:0 1px 4px rgba(43,36,26,.35);border:2px solid var(--page);}
   #seek::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid var(--page);}
-  .controlsRow{display:flex;align-items:center;justify-content:center;gap:28px;}
+  .controlsRow{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;}
+  .controlsRow .transport{grid-column:2;display:flex;align-items:center;justify-content:center;gap:28px;}
+  .controlsRow .speedSlot{grid-column:3;display:flex;justify-content:flex-end;}
   .ctrlBtn{background:none;border:none;color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:6px;}
   .ctrlBtn svg{width:26px;height:26px;fill:var(--ink);}
   #playBtn{width:64px;height:64px;border-radius:50%;background:var(--accent);box-shadow:0 3px 10px rgba(138,51,36,.35);}
@@ -81,8 +83,7 @@
   #playBtn:active{transform:scale(.96);}
   .skipLabel{position:absolute;font-size:9px;font-family:Georgia,serif;font-weight:bold;color:var(--accent);top:50%;left:50%;transform:translate(-50%,-45%);}
   .skipBtn{position:relative;}
-  .metaRow{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:12px;}
-  #speed{font-family:Georgia,serif;font-size:12px;color:var(--ink-dim);background:var(--page);border:1px solid var(--rule);border-radius:14px;padding:5px 12px;}
+  #speed{font-family:Georgia,serif;font-size:11px;color:var(--ink-dim);background:var(--page);border:1px solid var(--rule);border-radius:14px;padding:4px 8px;}
   #dropzone{font-size:12px;color:var(--ink-dim);text-align:center;margin-top:10px;display:none;}
   #dropzone button{font-family:Georgia,serif;font-size:12px;color:var(--accent);background:none;border:none;text-decoration:underline;cursor:pointer;padding:0;}
 </style>
@@ -120,25 +121,28 @@
       <span id="durTime">0:00</span>
     </div>
     <div class="controlsRow">
-      <button class="ctrlBtn skipBtn" id="back15" aria-label="Back 15 seconds">
-        <svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>
-        <span class="skipLabel">15</span>
-      </button>
-      <button id="playBtn" class="ctrlBtn" aria-label="Play">
-        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-      </button>
-      <button class="ctrlBtn skipBtn" id="fwd15" aria-label="Forward 15 seconds">
-        <svg viewBox="0 0 24 24"><path d="M12 5V1l5 5-5 5V7c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6h2c0 4.42-3.58 8-8 8s-8-3.58-8-8 3.58-8 8-8z"/></svg>
-        <span class="skipLabel">15</span>
-      </button>
-    </div>
-    <div class="metaRow">
-      <select id="speed">
-        <option value="0.75">0.75&times;</option>
-        <option value="1" selected>1&times;</option>
-        <option value="1.25">1.25&times;</option>
-        <option value="1.5">1.5&times;</option>
-      </select>
+      <div class="transport">
+        <button class="ctrlBtn skipBtn" id="back15" aria-label="Back 15 seconds">
+          <svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>
+          <span class="skipLabel">15</span>
+        </button>
+        <button id="playBtn" class="ctrlBtn" aria-label="Play">
+          <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        </button>
+        <button class="ctrlBtn skipBtn" id="fwd15" aria-label="Forward 15 seconds">
+          <svg viewBox="0 0 24 24"><path d="M12 5V1l5 5-5 5V7c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6h2c0 4.42-3.58 8-8 8s-8-3.58-8-8 3.58-8 8-8z"/></svg>
+          <span class="skipLabel">15</span>
+        </button>
+      </div>
+      <div class="speedSlot">
+        <select id="speed">
+          <option value="0.75">0.75&times;</option>
+          <option value="1" selected>1&times;</option>
+          <option value="1.15">1.15&times;</option>
+          <option value="1.25">1.25&times;</option>
+          <option value="1.5">1.5&times;</option>
+        </select>
+      </div>
     </div>
     <div id="dropzone">Audio didn't load automatically &mdash; <button id="pickFile">choose the mp3 file</button></div>
   </div>
@@ -202,19 +206,19 @@ function binarySearchWord(t){
   return ans;
 }
 function updateHighlight(){
+  // Called on every 'timeupdate' during normal playback. Word timestamps
+  // from the ASR aren't always perfectly monotonic (tiny overlaps/jitter
+  // at paragraph boundaries), so this only ever moves forward — a
+  // same-or-earlier index is treated as jitter and ignored. Real
+  // backward moves (seeking, chapter jumps, word clicks) go through
+  // syncSpokenState() instead, which recomputes everything from scratch.
   const t = audio.currentTime; const idx = binarySearchWord(t);
-  if(idx === lastIdx) return;
-  if(idx > lastIdx){
-    for(let i = Math.max(lastIdx, 0); i < idx; i++){
-      flatWords[i].el.classList.remove('current'); flatWords[i].el.classList.add('spoken');
-    }
-  } else if(idx < lastIdx){
-    for(let i = Math.max(idx, 0) + 1; i <= lastIdx; i++){
-      flatWords[i].el.classList.remove('current', 'spoken');
-    }
+  if(idx <= lastIdx) return;
+  for(let i = Math.max(lastIdx, 0); i < idx; i++){
+    flatWords[i].el.classList.remove('current'); flatWords[i].el.classList.add('spoken');
   }
-  if(idx>=0){ flatWords[idx].el.classList.remove('spoken'); flatWords[idx].el.classList.add('current');
-    flatWords[idx].el.scrollIntoView({block:'center', behavior:'smooth'}); }
+  flatWords[idx].el.classList.remove('spoken'); flatWords[idx].el.classList.add('current');
+  flatWords[idx].el.scrollIntoView({block:'center', behavior:'smooth'});
   lastIdx = idx;
 }
 function syncSpokenState(){
