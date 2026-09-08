@@ -26,16 +26,18 @@
     text-transform:uppercase;color:var(--accent);margin:0 0 10px;}
   header h1{font-size:26px;font-weight:400;margin:0;letter-spacing:.01em;}
   header .backlink{display:block;margin-top:10px;font-size:12px;color:var(--ink-dim);text-decoration:none;}
+  .headerLinks{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:10px;}
+  .headerLinks .backlink{margin-top:0;}
+  .headerLinks .sep{color:var(--rule);font-size:12px;}
+  #chaptersBtn{font-family:inherit;background:none;border:none;padding:0;margin:0;cursor:pointer;
+    font-size:12px;color:var(--ink-dim);text-decoration:underline;display:inline-flex;align-items:center;gap:5px;}
+  #chaptersBtn svg{width:13px;height:13px;stroke:var(--ink-dim);fill:none;stroke-width:2;stroke-linecap:round;}
   main p{font-size:20px;line-height:1.9;margin:0 0 26px;text-align:left;}
   .word{transition:background-color .12s ease,color .12s ease;border-radius:3px;padding:0 1px;cursor:pointer;}
   .word.spoken{color:var(--spoken);}
   .word.current{background:var(--highlight);color:var(--highlight-text);box-shadow:0 0 0 1px var(--highlight);}
   .word:hover{background:#e5d9be;}
 
-  #chaptersBtn{position:fixed;top:calc(14px + env(safe-area-inset-top));right:14px;z-index:5;
-    width:38px;height:38px;border-radius:50%;background:var(--page);border:1px solid var(--rule);
-    display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 8px rgba(43,36,26,.14);}
-  #chaptersBtn svg{width:18px;height:18px;stroke:var(--accent);fill:none;stroke-width:2;stroke-linecap:round;}
   #chaptersOverlay{position:fixed;inset:0;background:rgba(43,36,26,.42);display:none;z-index:20;}
   #chaptersOverlay.open{display:block;}
   #chaptersSheet{position:absolute;left:0;right:0;bottom:0;max-height:72vh;background:var(--page);
@@ -86,9 +88,6 @@
 </style>
 </head>
 <body>
-<button id="chaptersBtn" aria-label="Chapters">
-  <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
-</button>
 <div id="chaptersOverlay">
   <div id="chaptersSheet">
     <div class="sheetHeader"><span>Chapters</span><button id="closeChapters" aria-label="Close">&times;</button></div>
@@ -100,7 +99,14 @@
   <header>
     <p class="kicker">B.O.T.A. &middot; Tree of Life</p>
     <h1>Class 10</h1>
-    <a class="backlink" href="../index.html">&larr; all classes</a>
+    <div class="headerLinks">
+      <a class="backlink" href="../index.html">&larr; all classes</a>
+      <span class="sep">&middot;</span>
+      <button id="chaptersBtn" type="button">
+        <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+        Chapters
+      </button>
+    </div>
   </header>
   <main id="text"></main>
 </div>
@@ -198,7 +204,15 @@ function binarySearchWord(t){
 function updateHighlight(){
   const t = audio.currentTime; const idx = binarySearchWord(t);
   if(idx === lastIdx) return;
-  if(lastIdx>=0){ flatWords[lastIdx].el.classList.remove('current'); flatWords[lastIdx].el.classList.add('spoken'); }
+  if(idx > lastIdx){
+    for(let i = Math.max(lastIdx, 0); i < idx; i++){
+      flatWords[i].el.classList.remove('current'); flatWords[i].el.classList.add('spoken');
+    }
+  } else if(idx < lastIdx){
+    for(let i = Math.max(idx, 0) + 1; i <= lastIdx; i++){
+      flatWords[i].el.classList.remove('current', 'spoken');
+    }
+  }
   if(idx>=0){ flatWords[idx].el.classList.remove('spoken'); flatWords[idx].el.classList.add('current');
     flatWords[idx].el.scrollIntoView({block:'center', behavior:'smooth'}); }
   lastIdx = idx;
@@ -254,9 +268,27 @@ audio.addEventListener('timeupdate', () => {
   updateHighlight();
   if(!seekDragging){ seek.value = Math.floor(audio.currentTime*10); curTime.textContent = fmt(audio.currentTime); }
 });
+const PROGRESS_KEY = 'bota-tol-progress-class-10';
+function saveProgress(){
+  try { localStorage.setItem(PROGRESS_KEY, String(audio.currentTime)); } catch(e){}
+}
 audio.addEventListener('loadedmetadata', () => {
   seek.max = Math.floor(audio.duration*10); durTime.textContent = fmt(audio.duration);
+  try {
+    const saved = parseFloat(localStorage.getItem(PROGRESS_KEY));
+    if(!isNaN(saved) && saved > 3 && saved < audio.duration - 2){
+      audio.currentTime = saved;
+      seek.value = Math.floor(saved*10);
+      curTime.textContent = fmt(saved);
+      syncSpokenState();
+    }
+  } catch(e){}
 });
+audio.addEventListener('pause', saveProgress);
+audio.addEventListener('seeked', saveProgress);
+setInterval(() => { if(!audio.paused) saveProgress(); }, 5000);
+document.addEventListener('visibilitychange', () => { if(document.hidden) saveProgress(); });
+window.addEventListener('pagehide', saveProgress);
 audio.addEventListener('error', () => { dropzone.style.display = 'block'; });
 audio.addEventListener('play', () => { playBtn.classList.add('playing');
   playBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>';
