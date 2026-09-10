@@ -70,6 +70,18 @@
   </ul>
 </div>
 <script>
+// Home-screen app: keep same-site links inside the app (iOS otherwise
+// hands anything it considers out of scope to an in-app Safari view).
+if(navigator.standalone){
+  document.addEventListener('click', e => {
+    const a = e.target.closest('a[href]');
+    if(!a || a.target === '_blank') return;
+    const u = new URL(a.getAttribute('href'), location.href);
+    if(u.origin !== location.origin) return;
+    e.preventDefault();
+    location.href = u.href;
+  }, true);
+}
 (function(){
   let done = 0, total = 0;
   document.querySelectorAll('li a[data-class]').forEach(a => {
