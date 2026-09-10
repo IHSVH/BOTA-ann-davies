@@ -93,8 +93,9 @@
   #playBtn svg{width:26px;height:26px;fill:#fff;margin-left:2px;}
   #playBtn.playing svg{margin-left:0;}
   #playBtn:active{transform:scale(.96);}
-  .skipLabel{position:absolute;font-size:9px;font-family:var(--sans);font-weight:bold;color:var(--gold-deep);top:50%;left:50%;transform:translate(-50%,-45%);}
+  .skipLabel{position:absolute;font-size:10px;font-family:var(--sans);font-weight:600;letter-spacing:.01em;line-height:1;color:var(--gold-deep);top:50%;left:50%;transform:translate(-50%,-50%);}
   .skipBtn{position:relative;}
+  .skipBtn svg.arc{width:34px;height:34px;fill:none;stroke:var(--ink-soft);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
   #speed{font-family:var(--sans);font-size:.7rem;color:var(--ink-dim);background:var(--page);border:1px solid var(--rule);border-radius:14px;padding:4px 8px;}
   #dropzone{font-size:.75rem;font-family:var(--sans);color:var(--ink-dim);text-align:center;margin-top:10px;display:none;}
   #dropzone button{font-family:var(--sans);font-size:.75rem;color:var(--gold-deep);background:none;border:none;text-decoration:underline;cursor:pointer;padding:0;}
@@ -150,14 +151,14 @@
     <div class="controlsRow">
       <div class="transport">
         <button class="ctrlBtn skipBtn" id="back15" aria-label="Back 15 seconds">
-          <svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>
+          <svg viewBox="0 0 24 24" class="arc"><path d="M12 4a8 8 0 1 1-8 8"/><path d="M15 1l-3 3 3 3"/></svg>
           <span class="skipLabel">15</span>
         </button>
         <button id="playBtn" class="ctrlBtn" aria-label="Play">
           <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
         </button>
         <button class="ctrlBtn skipBtn" id="fwd15" aria-label="Forward 15 seconds">
-          <svg viewBox="0 0 24 24"><path d="M12 5V1l5 5-5 5V7c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6h2c0 4.42-3.58 8-8 8s-8-3.58-8-8 3.58-8 8-8z"/></svg>
+          <svg viewBox="0 0 24 24" class="arc"><path d="M12 4a8 8 0 1 0 8 8"/><path d="M9 1l3 3-3 3"/></svg>
           <span class="skipLabel">15</span>
         </button>
       </div>
