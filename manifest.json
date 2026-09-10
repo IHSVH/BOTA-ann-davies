@@ -1,0 +1,16 @@
+{
+  "name": "Attainment on the Tree of Life",
+  "short_name": "Tree of Life",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#FBF9F2",
+  "theme_color": "#B4A67F",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "1024x1024",
+      "type": "image/png"
+    }
+  ]
+}

@@ -8,6 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Tree of Life 6">
 <meta name="theme-color" content="#FBF9F2">
+<link rel="manifest" href="../manifest.json">
 <link rel="icon" href="../icon.png">
 <link rel="apple-touch-icon" href="../icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -431,6 +432,7 @@ audio.addEventListener('timeupdate', () => {
 const PROGRESS_KEY = 'bota-tol-progress-class-6';
 const DURATION_KEY = 'bota-tol-duration-class-6';
 const DONE_KEY = 'bota-tol-done-class-6';
+try { if(navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); } catch(e){}
 let resumeTarget = null;      // position still to be restored
 let progressArmed = false;    // saves allowed
 let resumeTries = 0;
