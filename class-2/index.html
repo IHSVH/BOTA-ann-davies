@@ -274,7 +274,15 @@ function updateHighlight(){
   // backward moves (seeking, chapter jumps, word clicks) go through
   // syncSpokenState() instead, which recomputes everything from scratch.
   const t = audio.currentTime; const idx = binarySearchWord(t);
-  if(idx <= lastIdx) return;
+  if(idx < 0) return;
+  // A real backward move we didn't initiate (lock-screen scrubbing, a seek
+  // the browser applied late): recompute everything.
+  if(idx < lastIdx - 2){ syncSpokenState(false); return; }
+  if(idx <= lastIdx){
+    // Jitter — but make sure the mark is still where it should be.
+    if(!flatWords[lastIdx].el.classList.contains('current')) syncSpokenState(false);
+    return;
+  }
   for(let i = Math.max(lastIdx, 0); i < idx; i++){
     flatWords[i].el.classList.remove('current'); flatWords[i].el.classList.add('spoken');
   }
@@ -357,6 +365,7 @@ if(CHAPTERS.length){
       e.preventDefault();
       audio.currentTime = ch.t;
       syncSpokenState(true);
+      userNavigated();
       chaptersOverlay.classList.remove('open');
       if(audio.paused) audio.play();
     });
@@ -413,31 +422,81 @@ audio.addEventListener('timeupdate', () => {
   if(audio.duration) progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
   updateChapter();
 });
+// ---- Listening progress ----
+// The saved position is restored as soon as the browser will honour a seek
+// (iOS often ignores one made before playback starts), and nothing is
+// written back until that restore has actually taken — or the reader has
+// deliberately moved somewhere else — so an early save can never wipe out
+// real progress with a near-zero position.
 const PROGRESS_KEY = 'bota-tol-progress-class-2';
 const DURATION_KEY = 'bota-tol-duration-class-2';
 const DONE_KEY = 'bota-tol-done-class-2';
-function saveProgress(){
-  try { localStorage.setItem(PROGRESS_KEY, String(audio.currentTime)); } catch(e){}
+let resumeTarget = null;      // position still to be restored
+let progressArmed = false;    // saves allowed
+let resumeTries = 0;
+try {
+  const saved = parseFloat(localStorage.getItem(PROGRESS_KEY));
+  if(!isNaN(saved) && saved > 3) resumeTarget = saved;
+} catch(e){}
+if(resumeTarget === null) progressArmed = true;
+else { curTime.textContent = fmt(resumeTarget); }
+
+function saveProgress(force){
+  if(!progressArmed && !force) return;
+  const t = audio.currentTime;
+  if(!isFinite(t)) return;
+  try {
+    const prev = parseFloat(localStorage.getItem(PROGRESS_KEY));
+    if(!force && t < 5 && prev >= 10) return;  // don't clobber real progress with a stray zero
+    localStorage.setItem(PROGRESS_KEY, String(t));
+  } catch(e){}
 }
-audio.addEventListener('ended', () => { try { localStorage.setItem(DONE_KEY, '1'); } catch(e){} });
+function settleResume(){
+  resumeTarget = null; progressArmed = true;
+}
+function applyResume(){
+  if(resumeTarget === null) return;
+  if(audio.duration && resumeTarget >= audio.duration - 2){ settleResume(); return; }
+  if(Math.abs(audio.currentTime - resumeTarget) < 1.5){ settleResume(); return; }
+  if(resumeTries++ > 6) { settleResume(); return; }
+  try { audio.currentTime = resumeTarget; } catch(e){}
+  seek.value = Math.floor(resumeTarget*10); curTime.textContent = fmt(resumeTarget);
+  syncSpokenState('auto');
+}
+// The reader chose a position themselves: that wins over any pending restore.
+function userNavigated(){
+  settleResume();
+  saveProgress(true);
+}
 audio.addEventListener('loadedmetadata', () => {
   seek.max = Math.floor(audio.duration*10); durTime.textContent = fmt(audio.duration);
   try { localStorage.setItem(DURATION_KEY, String(audio.duration)); } catch(e){}
-  try {
-    const saved = parseFloat(localStorage.getItem(PROGRESS_KEY));
-    if(!isNaN(saved) && saved > 3 && saved < audio.duration - 2){
-      audio.currentTime = saved;
-      seek.value = Math.floor(saved*10);
-      curTime.textContent = fmt(saved);
-      syncSpokenState('auto');
-    }
-  } catch(e){}
+  applyResume();
 });
-audio.addEventListener('pause', saveProgress);
-audio.addEventListener('seeked', saveProgress);
-setInterval(() => { if(!audio.paused) saveProgress(); }, 5000);
+audio.addEventListener('canplay', applyResume);
+audio.addEventListener('play', applyResume);
+audio.addEventListener('seeked', () => {
+  if(resumeTarget !== null && Math.abs(audio.currentTime - resumeTarget) < 1.5) settleResume();
+  syncSpokenState(false);
+  saveProgress();
+});
+let lastSaveAt = 0;
+audio.addEventListener('timeupdate', () => {
+  if(resumeTarget !== null){
+    if(Math.abs(audio.currentTime - resumeTarget) < 1.5) settleResume();
+    else if(audio.currentTime < 2 && !audio.paused) applyResume();
+  }
+  const now = Date.now();
+  if(now - lastSaveAt > 3000){ lastSaveAt = now; saveProgress(); }
+});
+audio.addEventListener('ended', () => {
+  try { localStorage.setItem(DONE_KEY, '1'); } catch(e){}
+  saveProgress(true);
+});
+audio.addEventListener('pause', () => saveProgress());
 document.addEventListener('visibilitychange', () => { if(document.hidden) saveProgress(); });
-window.addEventListener('pagehide', saveProgress);
+window.addEventListener('pagehide', () => saveProgress());
+window.addEventListener('beforeunload', () => saveProgress());
 audio.addEventListener('error', () => { dropzone.style.display = 'block'; });
 audio.addEventListener('play', () => { playBtn.classList.add('playing');
   playBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>';
@@ -448,14 +507,14 @@ audio.addEventListener('pause', () => { playBtn.classList.remove('playing');
 
 playBtn.addEventListener('click', () => { if(audio.paused) audio.play(); else audio.pause(); });
 document.getElementById('back15').addEventListener('click', () => {
-  audio.currentTime = Math.max(0, audio.currentTime-15); syncSpokenState(true); });
+  audio.currentTime = Math.max(0, audio.currentTime-15); syncSpokenState(true); userNavigated(); });
 document.getElementById('fwd15').addEventListener('click', () => {
-  audio.currentTime = Math.min(audio.duration, audio.currentTime+15); syncSpokenState(true); });
+  audio.currentTime = Math.min(audio.duration, audio.currentTime+15); syncSpokenState(true); userNavigated(); });
 
 seek.addEventListener('mousedown', () => seekDragging = true);
 seek.addEventListener('touchstart', () => seekDragging = true);
 seek.addEventListener('input', () => { curTime.textContent = fmt(seek.value/10); });
-seek.addEventListener('change', () => { audio.currentTime = seek.value/10; seekDragging = false; syncSpokenState(true); });
+seek.addEventListener('change', () => { audio.currentTime = seek.value/10; seekDragging = false; syncSpokenState(true); userNavigated(); });
 
 speedEl.addEventListener('change', () => { audio.playbackRate = parseFloat(speedEl.value); });
 
@@ -463,6 +522,7 @@ textEl.addEventListener('click', e => {
   if(e.target.classList.contains('word')){
     audio.currentTime = parseFloat(e.target.dataset.start);
     syncSpokenState(false);
+    userNavigated();
     if(audio.paused) audio.play();
   }
 });
