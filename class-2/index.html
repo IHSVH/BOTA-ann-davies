@@ -87,6 +87,15 @@
   #speed{font-family:Georgia,serif;font-size:11px;color:var(--ink-dim);background:var(--page);border:1px solid var(--rule);border-radius:14px;padding:4px 8px;}
   #dropzone{font-size:12px;color:var(--ink-dim);text-align:center;margin-top:10px;display:none;}
   #dropzone button{font-family:Georgia,serif;font-size:12px;color:var(--accent);background:none;border:none;text-decoration:underline;cursor:pointer;padding:0;}
+
+  #resumeBtn{position:fixed;left:50%;bottom:calc(148px + env(safe-area-inset-bottom));z-index:15;
+    display:flex;align-items:center;gap:8px;font-family:Georgia,serif;font-size:13px;color:var(--page);
+    background:var(--accent);border:none;border-radius:20px;padding:10px 18px;cursor:pointer;
+    box-shadow:0 4px 16px rgba(43,36,26,.28);
+    opacity:0;pointer-events:none;transform:translate(-50%,8px);
+    transition:opacity .25s ease,transform .25s ease;}
+  #resumeBtn.show{opacity:1;pointer-events:auto;transform:translate(-50%,0);}
+  #resumeBtn svg{width:14px;height:14px;fill:var(--page);flex:0 0 auto;}
 </style>
 </head>
 <body>
@@ -112,6 +121,11 @@
   </header>
   <main id="text"></main>
 </div>
+
+<button id="resumeBtn" type="button">
+  <svg viewBox="0 0 24 24"><path d="M12 2a1 1 0 011 1v2.06A7.002 7.002 0 0118.94 11H21a1 1 0 010 2h-2.06A7.002 7.002 0 0113 18.94V21a1 1 0 01-2 0v-2.06A7.002 7.002 0 015.06 13H3a1 1 0 010-2h2.06A7.002 7.002 0 0111 5.06V3a1 1 0 011-1zm0 5a5 5 0 100 10 5 5 0 000-10zm0 3a2 2 0 110 4 2 2 0 010-4z"/></svg>
+  <span>Return to reading</span>
+</button>
 
 <div id="player">
   <div id="playerHandle"></div>
@@ -170,6 +184,7 @@ const chaptersBtn = document.getElementById('chaptersBtn');
 const chaptersOverlay = document.getElementById('chaptersOverlay');
 const chaptersList = document.getElementById('chaptersList');
 const closeChapters = document.getElementById('closeChapters');
+const resumeBtn = document.getElementById('resumeBtn');
 
 pickFile.addEventListener('click', () => {
   const input = document.createElement('input');
@@ -206,6 +221,18 @@ function binarySearchWord(t){
     if(flatWords[mid].start<=t){ ans=mid; lo=mid+1; } else hi=mid-1; }
   return ans;
 }
+// Scrolling to follow the current word is done through this helper so we
+// can tell our own programmatic scrolls apart from the reader manually
+// scrolling around the page (see the window 'scroll' listener below).
+let programmaticScroll = false;
+let programmaticScrollTimer = null;
+function scrollWordIntoView(el, behavior){
+  programmaticScroll = true;
+  el.scrollIntoView({block:'center', behavior: behavior || 'smooth'});
+  clearTimeout(programmaticScrollTimer);
+  programmaticScrollTimer = setTimeout(() => { programmaticScroll = false; }, 700);
+}
+
 function updateHighlight(){
   // Called on every 'timeupdate' during normal playback. Word timestamps
   // from the ASR aren't always perfectly monotonic (tiny overlaps/jitter
@@ -219,15 +246,48 @@ function updateHighlight(){
     flatWords[i].el.classList.remove('current'); flatWords[i].el.classList.add('spoken');
   }
   flatWords[idx].el.classList.remove('spoken'); flatWords[idx].el.classList.add('current');
-  flatWords[idx].el.scrollIntoView({block:'center', behavior:'smooth'});
+  if(!autoFollowSuspended) scrollWordIntoView(flatWords[idx].el);
   lastIdx = idx;
 }
-function syncSpokenState(){
+// scrollBehavior: falsy = don't scroll, true/'smooth' = animate, 'auto' = jump instantly.
+// Used for deliberate navigation (word/chapter clicks, skip buttons, seeking,
+// resuming saved progress) — always clears the "reader scrolled away" state.
+function syncSpokenState(scrollBehavior){
   const t = audio.currentTime; const idx = binarySearchWord(t);
   flatWords.forEach((w,i) => { w.el.classList.remove('current','spoken');
     if(i<idx) w.el.classList.add('spoken'); if(i===idx) w.el.classList.add('current'); });
   lastIdx = idx;
+  autoFollowSuspended = false;
+  hideResumeBtn();
+  if(scrollBehavior && idx>=0){
+    scrollWordIntoView(flatWords[idx].el, scrollBehavior === true ? 'smooth' : scrollBehavior);
+  }
 }
+
+// If the reader manually scrolls away from the current word (to look ahead,
+// re-read something, etc.) we stop auto-following so we don't fight them,
+// and show a small pill to jump back — which itself fades if left alone.
+let autoFollowSuspended = false;
+let resumeHideTimer = null;
+function showResumeBtn(){
+  resumeBtn.classList.add('show');
+  clearTimeout(resumeHideTimer);
+  resumeHideTimer = setTimeout(() => resumeBtn.classList.remove('show'), 4000);
+}
+function hideResumeBtn(){
+  resumeBtn.classList.remove('show');
+  clearTimeout(resumeHideTimer);
+}
+window.addEventListener('scroll', () => {
+  if(programmaticScroll || lastIdx < 0) return;
+  autoFollowSuspended = true;
+  showResumeBtn();
+}, {passive:true});
+resumeBtn.addEventListener('click', () => {
+  autoFollowSuspended = false;
+  hideResumeBtn();
+  if(lastIdx >= 0) scrollWordIntoView(flatWords[lastIdx].el);
+});
 
 // Chapters sheet
 if(CHAPTERS.length){
@@ -239,7 +299,7 @@ if(CHAPTERS.length){
     a.addEventListener('click', e => {
       e.preventDefault();
       audio.currentTime = ch.t;
-      syncSpokenState();
+      syncSpokenState(true);
       chaptersOverlay.classList.remove('open');
       if(audio.paused) audio.play();
     });
@@ -285,7 +345,7 @@ audio.addEventListener('loadedmetadata', () => {
       audio.currentTime = saved;
       seek.value = Math.floor(saved*10);
       curTime.textContent = fmt(saved);
-      syncSpokenState();
+      syncSpokenState('auto');
     }
   } catch(e){}
 });
@@ -304,21 +364,21 @@ audio.addEventListener('pause', () => { playBtn.classList.remove('playing');
 
 playBtn.addEventListener('click', () => { if(audio.paused) audio.play(); else audio.pause(); });
 document.getElementById('back15').addEventListener('click', () => {
-  audio.currentTime = Math.max(0, audio.currentTime-15); syncSpokenState(); });
+  audio.currentTime = Math.max(0, audio.currentTime-15); syncSpokenState(true); });
 document.getElementById('fwd15').addEventListener('click', () => {
-  audio.currentTime = Math.min(audio.duration, audio.currentTime+15); syncSpokenState(); });
+  audio.currentTime = Math.min(audio.duration, audio.currentTime+15); syncSpokenState(true); });
 
 seek.addEventListener('mousedown', () => seekDragging = true);
 seek.addEventListener('touchstart', () => seekDragging = true);
 seek.addEventListener('input', () => { curTime.textContent = fmt(seek.value/10); });
-seek.addEventListener('change', () => { audio.currentTime = seek.value/10; seekDragging = false; syncSpokenState(); });
+seek.addEventListener('change', () => { audio.currentTime = seek.value/10; seekDragging = false; syncSpokenState(true); });
 
 speedEl.addEventListener('change', () => { audio.playbackRate = parseFloat(speedEl.value); });
 
 textEl.addEventListener('click', e => {
   if(e.target.classList.contains('word')){
     audio.currentTime = parseFloat(e.target.dataset.start);
-    syncSpokenState();
+    syncSpokenState(false);
     if(audio.paused) audio.play();
   }
 });
