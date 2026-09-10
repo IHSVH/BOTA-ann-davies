@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Tree of Life 5">
-<meta name="theme-color" content="#F4F1E4">
+<meta name="theme-color" content="#FBF9F2">
 <link rel="icon" href="../icon.png">
 <link rel="apple-touch-icon" href="../icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -15,9 +15,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300;0,400;0,500;1,400;1,500&family=Cormorant+Infant:wght@500;600&family=Assistant:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#F4F1E4; --page:#FBF9F2; --ink:#1F1F1D; --ink-soft:#46453F; --ink-dim:#7D7669;
+    --bg:#FBF9F2; --page:#FFFEFA; --ink:#1F1F1D; --ink-soft:#46453F; --ink-dim:#7D7669;
     --rule:#E1DBC9; --gold:#B4A67F; --gold-deep:#AC9D71; --gold-line:#BFB18F; --ref:#72ABBF;
-    --highlight:#B4A67F; --highlight-text:#1F1F1D; --spoken:#BFB18F;
+    --seg-hl:rgba(180,166,127,.16); --word-hl:#B4A67F; --highlight-text:#1F1F1D; --spoken:#BFB18F;
     --serif:"Crimson Pro",Georgia,serif; --display:"Cormorant Infant","Crimson Pro",serif;
     --sans:"Assistant",-apple-system,"Helvetica Neue",Arial,sans-serif;
   }
@@ -41,10 +41,13 @@
     font-size:.8rem;font-weight:600;color:var(--gold-deep);text-decoration:none;display:inline-flex;align-items:center;gap:5px;}
   #chaptersBtn svg{width:13px;height:13px;stroke:var(--gold-deep);fill:none;stroke-width:2;stroke-linecap:round;}
   main p{font-family:var(--serif);font-size:1.32rem;line-height:1.72;margin:0 0 1.3rem;text-align:left;color:var(--ink-soft);}
+  .seg{border-radius:3px;transition:background-color .2s ease;
+    -webkit-box-decoration-break:clone;box-decoration-break:clone;}
+  .seg.active{background:var(--seg-hl);box-shadow:0 0 0 3px var(--seg-hl);}
   .word{transition:background-color .12s ease,color .12s ease;border-radius:3px;padding:0 1px;cursor:pointer;}
   .word.spoken{color:var(--spoken);}
-  .word.current{background:var(--highlight);color:var(--highlight-text);box-shadow:0 0 0 1px var(--highlight);}
-  .word:hover{background:var(--gold-line);color:var(--ink);}
+  .word.current{background:var(--word-hl);color:var(--highlight-text);box-shadow:0 0 0 2px var(--word-hl);}
+  .word:hover{background:var(--word-hl);color:var(--ink);}
 
   #chaptersOverlay{position:fixed;inset:0;background:rgba(31,31,29,.42);display:none;z-index:20;}
   #chaptersOverlay.open{display:block;}
@@ -62,17 +65,18 @@
   #chaptersList .chapTime{font-family:var(--serif);font-style:italic;font-size:.78rem;color:var(--ref);min-width:42px;flex:0 0 auto;}
 
   #player{position:fixed;left:0;right:0;bottom:0;
-    background:linear-gradient(180deg, rgba(251,249,242,.75), var(--page) 22%);
+    background:linear-gradient(180deg, rgba(255,254,250,.75), var(--page) 22%);
     backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
     border-top:1px solid var(--rule);padding:14px 20px calc(16px + env(safe-area-inset-bottom));
     box-shadow:0 -8px 24px rgba(31,31,29,0.10);
     transition:transform .32s ease;}
-  #player.collapsed{transform:translateY(calc(100% - 30px));cursor:pointer;}
-  #playerHandle{display:none;}
-  #player.collapsed #playerHandle{display:block;position:absolute;top:9px;left:50%;
-    transform:translateX(-50%);width:34px;height:4px;border-radius:2px;background:var(--ink-dim);opacity:.5;}
-  #player.collapsed .inner{opacity:0;pointer-events:none;}
-  #player .inner{max-width:720px;margin:0 auto;transition:opacity .15s ease;}
+  #player.collapsed{transform:translateY(100%);box-shadow:none;}
+  #player .inner{max-width:720px;margin:0 auto;}
+  #progressStrip{position:fixed;left:0;right:0;bottom:0;z-index:9;pointer-events:none;
+    height:calc(3px + env(safe-area-inset-bottom));background:var(--rule);
+    opacity:0;transition:opacity .3s ease;}
+  #progressStrip.show{opacity:1;}
+  #progressFill{height:3px;width:0;background:var(--gold-deep);transition:width .25s linear;}
   .seekRow{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
   #curTime,#durTime{font-family:var(--sans);font-size:.75rem;color:var(--ink-dim);min-width:38px;flex:0 0 auto;}
   #durTime{text-align:right;}
@@ -102,6 +106,7 @@
     opacity:0;pointer-events:none;transform:translate(-50%,8px);
     transition:opacity .25s ease,transform .25s ease;}
   #resumeBtn.show{opacity:1;pointer-events:auto;transform:translate(-50%,0);}
+  #resumeBtn.low{bottom:calc(28px + env(safe-area-inset-bottom));}
   #resumeBtn svg{width:14px;height:14px;fill:#fff;flex:0 0 auto;}
 </style>
 </head>
@@ -134,8 +139,8 @@
   <span>Return to reading</span>
 </button>
 
+<div id="progressStrip"><div id="progressFill"></div></div>
 <div id="player">
-  <div id="playerHandle"></div>
   <div class="inner">
     <div class="seekRow">
       <span id="curTime">0:00</span>
@@ -192,6 +197,8 @@ const chaptersOverlay = document.getElementById('chaptersOverlay');
 const chaptersList = document.getElementById('chaptersList');
 const closeChapters = document.getElementById('closeChapters');
 const resumeBtn = document.getElementById('resumeBtn');
+const progressStrip = document.getElementById('progressStrip');
+const progressFill = document.getElementById('progressFill');
 
 pickFile.addEventListener('click', () => {
   const input = document.createElement('input');
@@ -207,15 +214,28 @@ const flatWords = [];
 let currentP = null;
 segments.forEach(seg => {
   if(!currentP || seg.newpara){ currentP = document.createElement('p'); textEl.appendChild(currentP); }
+  // Each transcript segment (roughly a sentence) gets its own wrapper so the
+  // sentence being read can carry a soft wash under the stronger word mark.
+  const segEl = document.createElement('span');
+  segEl.className = 'seg';
   seg.words.forEach(w => {
     const span = document.createElement('span');
     span.className = 'word'; span.textContent = w.t;
     span.dataset.start = w.s; span.dataset.end = w.e;
-    currentP.appendChild(span);
-    currentP.appendChild(document.createTextNode(' '));
-    flatWords.push({ start: w.s, end: w.e, el: span });
+    segEl.appendChild(span);
+    segEl.appendChild(document.createTextNode(' '));
+    flatWords.push({ start: w.s, end: w.e, el: span, seg: segEl });
   });
+  currentP.appendChild(segEl);
 });
+
+let activeSeg = null;
+function setActiveSeg(segEl){
+  if(segEl === activeSeg) return;
+  if(activeSeg) activeSeg.classList.remove('active');
+  activeSeg = segEl || null;
+  if(activeSeg) activeSeg.classList.add('active');
+}
 
 function fmt(sec){ if(!isFinite(sec)) return '0:00';
   const m = Math.floor(sec/60), s = Math.floor(sec%60);
@@ -253,6 +273,7 @@ function updateHighlight(){
     flatWords[i].el.classList.remove('current'); flatWords[i].el.classList.add('spoken');
   }
   flatWords[idx].el.classList.remove('spoken'); flatWords[idx].el.classList.add('current');
+  setActiveSeg(flatWords[idx].seg);
   if(!autoFollowSuspended) scrollWordIntoView(flatWords[idx].el);
   lastIdx = idx;
 }
@@ -263,6 +284,7 @@ function syncSpokenState(scrollBehavior){
   const t = audio.currentTime; const idx = binarySearchWord(t);
   flatWords.forEach((w,i) => { w.el.classList.remove('current','spoken');
     if(i<idx) w.el.classList.add('spoken'); if(i===idx) w.el.classList.add('current'); });
+  setActiveSeg(idx>=0 ? flatWords[idx].seg : null);
   lastIdx = idx;
   autoFollowSuspended = false;
   hideResumeBtn();
@@ -320,25 +342,44 @@ chaptersBtn.addEventListener('click', () => chaptersOverlay.classList.add('open'
 closeChapters.addEventListener('click', () => chaptersOverlay.classList.remove('open'));
 chaptersOverlay.addEventListener('click', e => { if(e.target === chaptersOverlay) chaptersOverlay.classList.remove('open'); });
 
-// Auto-minimize the player while it's playing and untouched, so it stays
-// out of the way while reading; tapping it (or pausing) brings it back.
+// Player visibility (Speechify-style): while playing and untouched, the
+// controls slide fully off-screen after a few seconds, leaving only a thin
+// progress line. Tapping anywhere on the page toggles them back; tapping a
+// word never toggles — it just starts reading from that word. Pausing
+// always brings the controls back.
 let collapseTimer = null;
+function setCollapsed(on){
+  player.classList.toggle('collapsed', on);
+  progressStrip.classList.toggle('show', on);
+  resumeBtn.classList.toggle('low', on);
+}
 function scheduleCollapse(){
   clearTimeout(collapseTimer);
-  collapseTimer = setTimeout(() => { if(!audio.paused) player.classList.add('collapsed'); }, 3500);
+  collapseTimer = setTimeout(() => { if(!audio.paused) setCollapsed(true); }, 3500);
 }
 function expandPlayer(){
-  player.classList.remove('collapsed');
+  setCollapsed(false);
   scheduleCollapse();
 }
-player.addEventListener('click', () => { if(player.classList.contains('collapsed')) expandPlayer(); });
-player.addEventListener('touchstart', () => { if(!player.classList.contains('collapsed')) scheduleCollapse(); }, {passive:true});
-player.addEventListener('mousemove', () => { if(!player.classList.contains('collapsed')) scheduleCollapse(); });
+player.addEventListener('touchstart', () => scheduleCollapse(), {passive:true});
+player.addEventListener('mousemove', () => scheduleCollapse());
+document.addEventListener('click', e => {
+  if(e.target.closest('#player, #chaptersOverlay, #resumeBtn, header, .bar, a, button, select')) return;
+  if(e.target.classList.contains('word')) return;
+  if(player.classList.contains('collapsed')) expandPlayer();
+  else { clearTimeout(collapseTimer); setCollapsed(true); }
+});
+document.addEventListener('keydown', e => {
+  if(e.code !== 'Space' || e.target.closest('select, input, button')) return;
+  e.preventDefault();
+  if(audio.paused) audio.play(); else audio.pause();
+});
 
 let seekDragging = false;
 audio.addEventListener('timeupdate', () => {
   updateHighlight();
   if(!seekDragging){ seek.value = Math.floor(audio.currentTime*10); curTime.textContent = fmt(audio.currentTime); }
+  if(audio.duration) progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
 });
 const PROGRESS_KEY = 'bota-tol-progress-class-5';
 function saveProgress(){
@@ -367,7 +408,7 @@ audio.addEventListener('play', () => { playBtn.classList.add('playing');
   scheduleCollapse(); });
 audio.addEventListener('pause', () => { playBtn.classList.remove('playing');
   playBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
-  clearTimeout(collapseTimer); player.classList.remove('collapsed'); });
+  clearTimeout(collapseTimer); setCollapsed(false); });
 
 playBtn.addEventListener('click', () => { if(audio.paused) audio.play(); else audio.pause(); });
 document.getElementById('back15').addEventListener('click', () => {
