@@ -30,13 +30,21 @@
   header{text-align:center;padding:28px 0 22px;border-bottom:1px solid var(--rule);margin-bottom:8px;}
   header h1{font-family:var(--display);font-weight:600;font-size:clamp(1.28rem,5.6vw,1.7rem);
     letter-spacing:.03em;text-transform:uppercase;margin:0;color:var(--ink);}
+  .summary{font-family:var(--sans);font-size:.8rem;color:var(--ink-dim);letter-spacing:.02em;margin:10px 0 0;}
+  .summary:empty{display:none;}
   ul{list-style:none;margin:0;padding:0;}
-  li a{display:flex;align-items:center;justify-content:space-between;
+  li a{position:relative;display:flex;align-items:center;gap:14px;
     padding:19px 4px;border-bottom:1px solid var(--rule);
     text-decoration:none;color:var(--ink-soft);font-family:var(--sans);font-size:1.05rem;}
   li a:active{background:var(--page);}
-  .num{color:var(--gold-deep);font-family:var(--sans);font-weight:600;font-size:.8rem;letter-spacing:.06em;text-transform:uppercase;min-width:80px;}
+  .num{color:var(--gold-deep);font-family:var(--sans);font-weight:600;font-size:.8rem;letter-spacing:.06em;text-transform:uppercase;margin-right:auto;}
+  .meta{font-size:.78rem;color:var(--ink-dim);font-weight:500;letter-spacing:.02em;white-space:nowrap;}
+  .meta:empty{display:none;}
+  .meta.done{color:var(--gold-deep);}
+  .meta svg{width:13px;height:13px;stroke:var(--gold-deep);fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-2px;margin-right:4px;}
   .arrow{color:var(--ink-dim);}
+  .prog{position:absolute;left:4px;right:4px;bottom:-1px;height:2px;pointer-events:none;}
+  .prog i{display:block;height:100%;width:0;background:var(--gold-deep);}
 </style>
 </head>
 <body>
@@ -44,20 +52,48 @@
 <div class="wrap">
   <header>
     <h1>Attainment on the Tree of Life</h1>
+    <p id="summary" class="summary"></p>
   </header>
   <ul>
-    <li><a href="class-1/index.html"><span class="num">Class 1</span><span class="arrow">&rarr;</span></a></li>
-    <li><a href="class-2/index.html"><span class="num">Class 2</span><span class="arrow">&rarr;</span></a></li>
-    <li><a href="class-3/index.html"><span class="num">Class 3</span><span class="arrow">&rarr;</span></a></li>
-    <li><a href="class-4/index.html"><span class="num">Class 4</span><span class="arrow">&rarr;</span></a></li>
-    <li><a href="class-5/index.html"><span class="num">Class 5</span><span class="arrow">&rarr;</span></a></li>
-    <li><a href="class-6/index.html"><span class="num">Class 6</span><span class="arrow">&rarr;</span></a></li>
-    <li><a href="class-7/index.html"><span class="num">Class 7</span><span class="arrow">&rarr;</span></a></li>
-    <li><a href="class-8/index.html"><span class="num">Class 8</span><span class="arrow">&rarr;</span></a></li>
-    <li><a href="class-9/index.html"><span class="num">Class 9</span><span class="arrow">&rarr;</span></a></li>
-    <li><a href="class-10/index.html"><span class="num">Class 10</span><span class="arrow">&rarr;</span></a></li>
-    <li><a href="class-11/index.html"><span class="num">Class 11</span><span class="arrow">&rarr;</span></a></li>
+    <li><a href="class-1/index.html" data-class="1" data-dur="4796"><span class="num">Class 1</span><span class="meta"></span><span class="arrow">&rarr;</span><span class="prog"><i></i></span></a></li>
+    <li><a href="class-2/index.html" data-class="2" data-dur="5430"><span class="num">Class 2</span><span class="meta"></span><span class="arrow">&rarr;</span><span class="prog"><i></i></span></a></li>
+    <li><a href="class-3/index.html" data-class="3" data-dur="4175"><span class="num">Class 3</span><span class="meta"></span><span class="arrow">&rarr;</span><span class="prog"><i></i></span></a></li>
+    <li><a href="class-4/index.html" data-class="4" data-dur="4738"><span class="num">Class 4</span><span class="meta"></span><span class="arrow">&rarr;</span><span class="prog"><i></i></span></a></li>
+    <li><a href="class-5/index.html" data-class="5" data-dur="6519"><span class="num">Class 5</span><span class="meta"></span><span class="arrow">&rarr;</span><span class="prog"><i></i></span></a></li>
+    <li><a href="class-6/index.html" data-class="6" data-dur="5195"><span class="num">Class 6</span><span class="meta"></span><span class="arrow">&rarr;</span><span class="prog"><i></i></span></a></li>
+    <li><a href="class-7/index.html" data-class="7" data-dur="5700"><span class="num">Class 7</span><span class="meta"></span><span class="arrow">&rarr;</span><span class="prog"><i></i></span></a></li>
+    <li><a href="class-8/index.html" data-class="8" data-dur="5961"><span class="num">Class 8</span><span class="meta"></span><span class="arrow">&rarr;</span><span class="prog"><i></i></span></a></li>
+    <li><a href="class-9/index.html" data-class="9" data-dur="6348"><span class="num">Class 9</span><span class="meta"></span><span class="arrow">&rarr;</span><span class="prog"><i></i></span></a></li>
+    <li><a href="class-10/index.html" data-class="10" data-dur="6901"><span class="num">Class 10</span><span class="meta"></span><span class="arrow">&rarr;</span><span class="prog"><i></i></span></a></li>
+    <li><a href="class-11/index.html" data-class="11" data-dur="3065"><span class="num">Class 11</span><span class="meta"></span><span class="arrow">&rarr;</span><span class="prog"><i></i></span></a></li>
   </ul>
 </div>
+<script>
+(function(){
+  let done = 0, total = 0;
+  document.querySelectorAll('li a[data-class]').forEach(a => {
+    total++;
+    const n = a.dataset.class, meta = a.querySelector('.meta'), fill = a.querySelector('.prog i');
+    let pos = 0, dur = parseFloat(a.dataset.dur) || 0, fin = false;
+    try {
+      pos = parseFloat(localStorage.getItem('bota-tol-progress-class-' + n)) || 0;
+      dur = parseFloat(localStorage.getItem('bota-tol-duration-class-' + n)) || dur;
+      fin = localStorage.getItem('bota-tol-done-class-' + n) === '1';
+    } catch(e){}
+    const pct = dur ? Math.min(100, pos / dur * 100) : 0;
+    if(fin || pct >= 97){
+      done++;
+      meta.className = 'meta done';
+      meta.innerHTML = '<svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg>Finished';
+      fill.style.width = '100%';
+    } else if(pct >= 1){
+      meta.textContent = Math.round(pct) + '%';
+      fill.style.width = pct + '%';
+    }
+  });
+  const s = document.getElementById('summary');
+  if(done) s.textContent = done + ' of ' + total + ' finished';
+})();
+</script>
 </body>
 </html>

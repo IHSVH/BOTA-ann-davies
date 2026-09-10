@@ -27,19 +27,24 @@
     font-family:var(--serif);
     min-height:100vh;-webkit-text-size-adjust:100%;overscroll-behavior-y:none;}
   .bar{position:sticky;top:0;z-index:6;background:var(--gold);color:#fff;font-family:var(--sans);
-    font-weight:500;font-size:1.02rem;text-align:center;letter-spacing:.03em;
-    padding:calc(env(safe-area-inset-top) + 14px) 16px 14px;}
+    display:grid;grid-template-columns:44px minmax(0,1fr) 44px;align-items:center;
+    padding:calc(env(safe-area-inset-top) + 6px) 8px 6px;box-shadow:0 1px 0 rgba(0,0,0,.06);}
+  .bar a,.bar button{color:#fff;background:none;border:none;padding:0;margin:0;cursor:pointer;font:inherit;
+    -webkit-tap-highlight-color:transparent;text-decoration:none;}
+  .barBtn{width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:22px;}
+  .barBtn:active{background:rgba(255,255,255,.18);}
+  .barBtn svg{width:22px;height:22px;fill:none;stroke:#fff;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;}
+  .barBtn.hidden{visibility:hidden;}
+  #barCenter{min-width:0;width:100%;text-align:center;line-height:1.2;padding:4px 2px;border-radius:8px;}
+  #barCenter:active{background:rgba(255,255,255,.12);}
+  #barClass{display:block;font-weight:600;font-size:.98rem;letter-spacing:.03em;}
+  #barChapter{display:block;font-weight:400;font-size:.78rem;opacity:.92;margin-top:2px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  #barChapter:empty{display:none;}
   .wrap{max-width:720px;margin:0 auto;padding:8px 24px 120px;}
-  header{padding:28px 0 20px;text-align:center;border-bottom:1px solid var(--rule);margin-bottom:36px;}
+  header{padding:28px 0 22px;text-align:center;border-bottom:1px solid var(--rule);margin-bottom:36px;}
   header h1{font-family:var(--display);font-weight:600;font-size:clamp(1.28rem,5.6vw,1.7rem);
     letter-spacing:.03em;text-transform:uppercase;margin:0;color:var(--ink);}
-  header .backlink{display:block;margin-top:10px;font-size:.8rem;color:var(--ink-dim);text-decoration:none;}
-  .headerLinks{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:14px;font-family:var(--sans);}
-  .headerLinks .backlink{margin-top:0;font-family:var(--sans);}
-  .headerLinks .sep{color:var(--rule);font-size:.8rem;}
-  #chaptersBtn{font-family:var(--sans);background:none;border:none;padding:0;margin:0;cursor:pointer;
-    font-size:.8rem;font-weight:600;color:var(--gold-deep);text-decoration:none;display:inline-flex;align-items:center;gap:5px;}
-  #chaptersBtn svg{width:13px;height:13px;stroke:var(--gold-deep);fill:none;stroke-width:2;stroke-linecap:round;}
   main p{font-family:var(--serif);font-size:1.32rem;line-height:1.72;margin:0 0 1.3rem;text-align:left;color:var(--ink-soft);}
   .seg{border-radius:3px;transition:background-color .2s ease;
     -webkit-box-decoration-break:clone;box-decoration-break:clone;}
@@ -62,6 +67,8 @@
   #chaptersList li a{display:flex;align-items:baseline;gap:14px;padding:14px 18px;text-decoration:none;
     color:var(--ink-soft);border-bottom:1px solid var(--rule);font-family:var(--serif);font-size:1rem;line-height:1.4;}
   #chaptersList li a:active{background:var(--bg);}
+  #chaptersList li a.active{color:var(--ink);font-weight:500;box-shadow:inset 3px 0 0 var(--gold-deep);}
+  #chaptersList li a.active .chapTime{color:var(--gold-deep);}
   #chaptersList .chapTime{font-family:var(--serif);font-style:italic;font-size:.78rem;color:var(--ref);min-width:42px;flex:0 0 auto;}
 
   #player{position:fixed;left:0;right:0;bottom:0;
@@ -119,18 +126,14 @@
   </div>
 </div>
 
-<div class="bar">Class 10</div>
+<div class="bar">
+  <a class="barBtn" href="../index.html" aria-label="All classes"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></a>
+  <button id="barCenter" type="button" aria-label="Chapters"><span id="barClass">Class 10</span><span id="barChapter"></span></button>
+  <button id="chaptersBtn" class="barBtn" type="button" aria-label="Chapters"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg></button>
+</div>
 <div class="wrap">
   <header>
     <h1>Attainment on the Tree of Life</h1>
-    <div class="headerLinks">
-      <a class="backlink" href="../index.html">&larr; all classes</a>
-      <span class="sep">&middot;</span>
-      <button id="chaptersBtn" type="button">
-        <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
-        Chapters
-      </button>
-    </div>
   </header>
   <main id="text"></main>
 </div>
@@ -199,6 +202,8 @@ const chaptersList = document.getElementById('chaptersList');
 const closeChapters = document.getElementById('closeChapters');
 const resumeBtn = document.getElementById('resumeBtn');
 const progressStrip = document.getElementById('progressStrip');
+const barCenter = document.getElementById('barCenter');
+const barChapter = document.getElementById('barChapter');
 const progressFill = document.getElementById('progressFill');
 
 pickFile.addEventListener('click', () => {
@@ -287,6 +292,7 @@ function syncSpokenState(scrollBehavior){
     if(i<idx) w.el.classList.add('spoken'); if(i===idx) w.el.classList.add('current'); });
   setActiveSeg(idx>=0 ? flatWords[idx].seg : null);
   lastIdx = idx;
+  updateChapter();
   autoFollowSuspended = false;
   hideResumeBtn();
   if(scrollBehavior && idx>=0){
@@ -319,7 +325,28 @@ resumeBtn.addEventListener('click', () => {
   if(lastIdx >= 0) scrollWordIntoView(flatWords[lastIdx].el);
 });
 
-// Chapters sheet
+// Chapters: sheet, current-chapter tracking (shown in the top bar and
+// marked in the sheet).
+const chapterRows = [];
+let curChapter = -1;
+function chapterIndexAt(t){
+  let i = CHAPTERS.length ? 0 : -1;
+  for(let k = 0; k < CHAPTERS.length; k++){ if(CHAPTERS[k].t <= t) i = k; else break; }
+  return i;
+}
+function updateChapter(){
+  const i = chapterIndexAt(audio.currentTime);
+  if(i === curChapter) return;
+  curChapter = i;
+  barChapter.textContent = i >= 0 ? CHAPTERS[i].title : '';
+  chapterRows.forEach((r, k) => r.classList.toggle('active', k === i));
+}
+function openChapters(){
+  if(!CHAPTERS.length) return;
+  chaptersOverlay.classList.add('open');
+  const act = chaptersList.querySelector('a.active');
+  if(act) act.scrollIntoView({block:'center'});
+}
 if(CHAPTERS.length){
   CHAPTERS.forEach(ch => {
     const li = document.createElement('li');
@@ -335,11 +362,14 @@ if(CHAPTERS.length){
     });
     li.appendChild(a);
     chaptersList.appendChild(li);
+    chapterRows.push(a);
   });
+  updateChapter();
 } else {
-  chaptersBtn.style.display = 'none';
+  chaptersBtn.classList.add('hidden');
 }
-chaptersBtn.addEventListener('click', () => chaptersOverlay.classList.add('open'));
+chaptersBtn.addEventListener('click', openChapters);
+barCenter.addEventListener('click', openChapters);
 closeChapters.addEventListener('click', () => chaptersOverlay.classList.remove('open'));
 chaptersOverlay.addEventListener('click', e => { if(e.target === chaptersOverlay) chaptersOverlay.classList.remove('open'); });
 
@@ -381,13 +411,18 @@ audio.addEventListener('timeupdate', () => {
   updateHighlight();
   if(!seekDragging){ seek.value = Math.floor(audio.currentTime*10); curTime.textContent = fmt(audio.currentTime); }
   if(audio.duration) progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+  updateChapter();
 });
 const PROGRESS_KEY = 'bota-tol-progress-class-10';
+const DURATION_KEY = 'bota-tol-duration-class-10';
+const DONE_KEY = 'bota-tol-done-class-10';
 function saveProgress(){
   try { localStorage.setItem(PROGRESS_KEY, String(audio.currentTime)); } catch(e){}
 }
+audio.addEventListener('ended', () => { try { localStorage.setItem(DONE_KEY, '1'); } catch(e){} });
 audio.addEventListener('loadedmetadata', () => {
   seek.max = Math.floor(audio.duration*10); durTime.textContent = fmt(audio.duration);
+  try { localStorage.setItem(DURATION_KEY, String(audio.duration)); } catch(e){}
   try {
     const saved = parseFloat(localStorage.getItem(PROGRESS_KEY));
     if(!isNaN(saved) && saved > 3 && saved < audio.duration - 2){
