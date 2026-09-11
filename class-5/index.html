@@ -42,7 +42,7 @@
   #barChapter{display:block;font-weight:400;font-size:.78rem;opacity:.92;margin-top:2px;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   #barChapter:empty{display:none;}
-  .wrap{max-width:720px;margin:0 auto;padding:8px 24px 120px;}
+  .wrap{max-width:720px;margin:0 auto;padding:8px 24px 180px;}
   header{padding:28px 0 22px;text-align:center;border-bottom:1px solid var(--rule);margin-bottom:36px;}
   header h1{font-family:var(--display);font-weight:600;font-size:clamp(1.28rem,5.6vw,1.7rem);
     letter-spacing:.03em;text-transform:uppercase;margin:0;color:var(--ink);}
@@ -72,19 +72,19 @@
   #chaptersList li a.active .chapTime{color:var(--gold-deep);}
   #chaptersList .chapTime{font-family:var(--serif);font-style:italic;font-size:.78rem;color:var(--ref);min-width:42px;flex:0 0 auto;}
 
-  #player{position:fixed;left:0;right:0;bottom:0;
-    background:linear-gradient(180deg, rgba(255,254,250,.75), var(--page) 22%);
-    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
-    border-top:1px solid var(--rule);padding:14px 20px calc(16px + env(safe-area-inset-bottom));
-    box-shadow:0 -8px 24px rgba(31,31,29,0.10);
-    transition:transform .32s ease;}
-  #player.collapsed{transform:translateY(100%);box-shadow:none;}
+  #player{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:10;
+    max-width:600px;margin:0 auto;background:var(--page);border:1px solid var(--rule);border-radius:18px;
+    padding:12px 18px 14px;box-shadow:0 10px 30px rgba(31,31,29,.16);
+    transition:transform .32s ease,opacity .32s ease;}
+  #player.collapsed{transform:translateY(calc(100% + 24px + env(safe-area-inset-bottom)));opacity:0;box-shadow:none;}
   #player .inner{max-width:720px;margin:0 auto;}
-  #progressStrip{position:fixed;left:0;right:0;bottom:0;z-index:9;pointer-events:none;
-    height:calc(3px + env(safe-area-inset-bottom));background:var(--rule);
-    opacity:0;transition:opacity .3s ease;}
+  #fade{position:fixed;left:0;right:0;bottom:0;z-index:8;pointer-events:none;
+    height:calc(64px + env(safe-area-inset-bottom));
+    background:linear-gradient(to bottom, rgba(251,249,242,0), var(--bg) 72%);}
+  #progressStrip{position:absolute;left:0;right:0;bottom:0;height:3px;pointer-events:none;
+    background:rgba(255,255,255,.22);opacity:0;transition:opacity .3s ease;}
   #progressStrip.show{opacity:1;}
-  #progressFill{height:3px;width:0;background:var(--gold-deep);transition:width .25s linear;}
+  #progressFill{height:100%;width:0;background:#fff;transition:width .25s linear;}
   .seekRow{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
   #curTime,#durTime{font-family:var(--sans);font-size:.75rem;color:var(--ink-dim);min-width:38px;flex:0 0 auto;}
   #durTime{text-align:right;}
@@ -108,7 +108,7 @@
   #dropzone{font-size:.75rem;font-family:var(--sans);color:var(--ink-dim);text-align:center;margin-top:10px;display:none;}
   #dropzone button{font-family:var(--sans);font-size:.75rem;color:var(--gold-deep);background:none;border:none;text-decoration:underline;cursor:pointer;padding:0;}
 
-  #resumeBtn{position:fixed;left:50%;bottom:calc(148px + env(safe-area-inset-bottom));z-index:15;
+  #resumeBtn{position:fixed;left:50%;bottom:calc(178px + env(safe-area-inset-bottom));z-index:15;
     display:flex;align-items:center;gap:8px;font-family:var(--sans);font-weight:600;font-size:.85rem;color:#fff;
     background:var(--gold-deep);border:none;border-radius:20px;padding:10px 18px;cursor:pointer;
     box-shadow:0 4px 16px rgba(31,31,29,.28);
@@ -131,6 +131,7 @@
   <a class="barBtn" href="../index.html" aria-label="All classes"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></a>
   <button id="barCenter" type="button" aria-label="Chapters"><span id="barClass">Class 5</span><span id="barChapter"></span></button>
   <button id="chaptersBtn" class="barBtn" type="button" aria-label="Chapters"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg></button>
+  <div id="progressStrip"><div id="progressFill"></div></div>
 </div>
 <div class="wrap">
   <header>
@@ -144,7 +145,7 @@
   <span>Return to reading</span>
 </button>
 
-<div id="progressStrip"><div id="progressFill"></div></div>
+<div id="fade"></div>
 <div id="player">
   <div class="inner">
     <div class="seekRow">
